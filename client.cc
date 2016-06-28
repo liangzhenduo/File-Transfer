@@ -1,16 +1,17 @@
 #include <stdio.h>
 #include <iostream>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/socket.h>
 #include <unistd.h>
+#include <errno.h>
 
 #define LENGTH 512
 
-struct sockaddr_in remote_addr;
+struct sockaddr_in addr_remote;
 
 int main(int argc, char *argv[]){
     if(argc<3){
@@ -28,12 +29,12 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
-    remote_addr.sin_family = AF_INET; 
-    remote_addr.sin_port = htons(PORT); 
-    inet_pton(AF_INET, IP, &remote_addr.sin_addr); 
-    bzero(&(remote_addr.sin_zero), 8);
+    addr_remote.sin_family = AF_INET; 
+    addr_remote.sin_port = htons(PORT); 
+    inet_pton(AF_INET, IP, &addr_remote.sin_addr); 
+    bzero(&(addr_remote.sin_zero), 8);
 
-    if (connect(sockfd, (struct sockaddr *)&remote_addr, sizeof(struct sockaddr)) == -1){
+    if (connect(sockfd, (struct sockaddr *)&addr_remote, sizeof(struct sockaddr)) == -1){
         fprintf(stderr, "ERROR: Failed to connect to the host! (errno = %d)\n",2);
         exit(1);
     }
@@ -45,7 +46,7 @@ int main(int argc, char *argv[]){
         scanf("%s", cmd);
         if(cmd[0]=='e'){
             write(sockfd, "\0", 1);
-            close (sockfd);
+            close(sockfd);
             printf("[Client] Connection lost.\n");
             exit(1);
         }
@@ -54,23 +55,24 @@ int main(int argc, char *argv[]){
             int n = write(sockfd, name_w, strlen(name_w));
             if(n<0) printf("Error: sending file");
 
-            printf("[Client] Sending %s to the Server...\n", name_r);
-            FILE *fs = fopen(name_r, "r");
+            printf("[Client] Sending %s to Server", name_r);
+            FILE *fs = fopen(name_r, "rb");
             if(fs == NULL){
-                printf("ERROR: File %s not found.\n", name_r);
+                printf("\nERROR: File %s not found.\n", name_r);
                 exit(1);
             }
 
-            bzero(sdbuf, LENGTH); 
-            int fs_block_sz;
+            int fs_block_sz, i=0;
             while((fs_block_sz = fread(sdbuf, sizeof(char), LENGTH, fs)) > 0){
+                if(i%100 == 0) printf(".");
                 if(send(sockfd, sdbuf, fs_block_sz, 0) < 0){
-                    fprintf(stderr, "ERROR: Failed to send file %s. (errno = %d)\n", name_r, errno);
+                    fprintf(stderr, "\nERROR: Failed to send file %s. (errno = %d)\n", name_r, errno);
                     break;
                 }
-                bzero(sdbuf, LENGTH);
+                i++;
             }
-            printf("[Client] Ok File %s from Client was Sent!\n", name_r);
+            printf("\n[Client] File %s was sent sucessfully.\n", name_r);
+            fclose(fs);
         }
     }
     return 0;

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <iostream>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -35,18 +36,15 @@ void *handle(void *socket_fd){
         if(name[0]=='\0')  //exit命令
             break;
         
-        FILE *fr = fopen(name, "a");
+        FILE *fr = fopen(name, "wb");
         if(fr == NULL)
             printf("File %s Cannot be opened file on server.\n", name);
         else{
-            bzero(revbuf, LENGTH); 
-            int fr_block_sz = 0;
-            
+            int fr_block_sz;
             while((fr_block_sz = recv(id, revbuf, LENGTH, 0)) > 0) {
                 int write_sz = fwrite(revbuf, sizeof(char), fr_block_sz, fr);
                 if(write_sz < fr_block_sz)
                     printf("File write failed on server.\n");
-                bzero(revbuf, LENGTH);
                 if (fr_block_sz == 0 || fr_block_sz != 512) 
                     break;
             }
@@ -62,6 +60,7 @@ void *handle(void *socket_fd){
             rawtime = time(NULL);
             timeinfo = localtime( &rawtime );
             printf("[Server] File %s received from Client_%d at %s", name, id, asctime(timeinfo));
+            fclose(fr);
         }
     }
 

@@ -12,5 +12,5 @@
 	./server 23333
 	
 	./client 127.0.0.1 23333
-	>>> send zero.jpg zero_cp.jpg
+	>>> send README.md COPY.md
 	>>> exit
